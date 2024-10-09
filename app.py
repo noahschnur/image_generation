@@ -1,3 +1,4 @@
+from flask import Flask, render_template, request
 import os
 import openai
 from dotenv import load_dotenv
@@ -5,6 +6,8 @@ from dotenv import load_dotenv
 from diffusers import StableDiffusionPipeline
 from PIL import Image
 import torch
+
+app = Flask(__name__, static_folder='static')
 
 load_dotenv()
 
@@ -18,7 +21,7 @@ def enhance_prompt(prompt):
   response = openai.ChatCompletion.create(
       model="gpt-3.5-turbo-0125",
       messages=[
-          {"role": "system", "content": "You are a helpful and informative AI assistant. You enhance and edit user prompts to be used in an image generating tool. Your responses are 100 words or less, and adhere to PG-13 guidelines. Enhance the following prompt:"},
+          {"role": "system", "content": "You are a helpful and informative AI assistant. You enhance and edit user prompts to be used in an image generating tool. Your responses are 100 words or less and you remove the name of any celebrity, professional athlete, and politician. You adhere to the MPAA rating system in the following ways: PG-13 guidelines for vilolence and language, and PG for all other topics. Enhance the following prompt:"},
           {"role": "user", "content": prompt}
       ],
       max_tokens=1024,
@@ -41,7 +44,7 @@ def generate_image(prompt, index=0):
   filename = f"generated_image_{index}.png"
 
   # Create the "Generated_images" folder if it doesn't exist
-  image_folder = "Generated_images"
+  image_folder = "static/Generated_images"
   os.makedirs(image_folder, exist_ok=True)  # Ensures folder creation
 
   # Save the image within the "Generated_images" folder
@@ -50,21 +53,28 @@ def generate_image(prompt, index=0):
   return image
 
 
+@app.route("/", methods=["GET", "POST"])
+def generate_image_view():
+    if request.method == "POST":
+        prompt = request.form["prompt"]
+        enhanced_prompt = enhance_prompt(prompt)
+        
+        # Get the count of existing images to use as the index
+        image_folder = "static/Generated_images"
+        existing_images = len([f for f in os.listdir(image_folder) if f.endswith('.png')])
+        
+        # Generate the image with the current index
+        generated_image = generate_image(enhanced_prompt, index=existing_images)
+        
+        # Construct the correct filename
+        image_filename = f"generated_image_{existing_images}.png"
+        
+        # Construct the correct path for the template
+        image_path = f"Generated_images/{image_filename}"
+        
+        return render_template("index.html", prompt=prompt, enhanced_prompt=enhanced_prompt, image_path=image_path)
+    else:
+        return render_template("index.html")
+
 if __name__ == "__main__":
-  prompt = input("Enter a prompt: ")
-  enhanced_prompt = enhance_prompt(prompt)
-  print(f"Enhanced Prompt: {enhanced_prompt}")
-
-  # Keep track of the image index
-  image_index = 0
-
-  while True:
-    generated_image = generate_image(enhanced_prompt, image_index)
-    generated_image.show()
-    image_index += 1  # Increment index for the next image
-
-    prompt = input("Enter another prompt (or 'q' to quit): ")
-    if prompt.lower() == 'q':
-      break
-
-  print("Image complete!")
+  app.run(debug=True)

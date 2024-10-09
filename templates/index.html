@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image Generator</title>
+</head>
+<body>
+  <h1>Image Generator</h1>
+  <form method="POST" action="/">
+    <label for="prompt">Enter a prompt:</label>
+    <input type="text" id="prompt" name="prompt" required>
+    <button type="submit">Generate Image</button>
+  </form>
+
+  {% if image_path %}
+    <img src="{{ url_for('static', filename=image_path) }}" alt="Generated Image">
+  {% else %}
+    <p>No image generated yet.</p>
+  {% endif %}
+
+  {% if enhanced_prompt and enhanced_prompt != prompt %}
+    <p>Enhanced Prompt: {{ enhanced_prompt }}</p>
+  {% endif %}
+
+  {% if prompt %}
+    <p>Original Prompt: {{ prompt }}</p>
+  {% endif %}
+</body>
+</html>
